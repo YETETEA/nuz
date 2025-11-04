@@ -1,33 +1,380 @@
-<!DOCTYPE html>
-<html>
+<!--
+  dashboard_nuz.html
+  Single-file professional dashboard (HTML + CSS + JS)
+
+  INSTRUCTIONS:
+  1) Replace the placeholder API_URL value (line with const API_URL = "https://script.google.com/macros/s/AKfycbzyE_ushUhZfueK-KIM-4nMDadwyZtmm_EMOlzP3NJ6mpMZQRLpwfokn7D9eNlSuS8q/exec") with your Apps Script Web App URL (the one that returns JSON, e.g. https://script.google.com/macros/s/AKfycb.../exec).
+  2) Save this file as index.html in the root of your GitHub Pages repo (replace the existing one).
+  3) Commit, then open https://yourusername.github.io/namarepo/ and hard-refresh (Ctrl+F5).
+
+  Features included:
+  - Responsive sidebar + topbar
+  - Dark/light mode toggle
+  - Cards: quick actions for Barang Masuk / Barang Keluar / Reload Stok / History
+  - Modal forms for Barang Masuk & Barang Keluar (POST to API)
+  - Stok area (GET ?action=stok) and simple rendered table
+  - History area (GET ?action=historyMasuk or historyKeluar)
+  - Notifications (temporary toast)
+  - All front-end code in one file for easy upload
+-->
+
+<!doctype html>
+<html lang="id">
 <head>
   <meta charset="utf-8">
-  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NUZ Dashboard</title>
   <link rel="icon" href="https://i.imgur.com/4QKd4ky.png">
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4;--text:#e6eef6}
+    [data-theme="light"]{--bg:#f6f9fc;--card:#ffffff;--muted:#6b7280;--accent:#0369a1;--text:#051124}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:var(--text);background:linear-gradient(180deg,#071029 0%,var(--bg) 100%);min-height:100vh}
+    .app{display:flex;min-height:100vh}
+    /* Sidebar */
+    .sidebar{width:260px;padding:20px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.12));border-right:1px solid rgba(255,255,255,0.03)}
+    .brand{font-weight:700;font-size:20px;display:flex;align-items:center;gap:10px}
+    .brand img{width:36px;height:36px;border-radius:8px}
+    nav{margin-top:20px}
+    nav a{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;color:var(--muted);text-decoration:none;margin-bottom:6px}
+    nav a.active, nav a:hover{background:rgba(255,255,255,0.02);color:var(--text)}
+    .content{flex:1;padding:22px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+    .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.02)}
+    .card h3{margin:0 0 8px 0;font-size:16px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--accent);color:#fff;text-decoration:none;border:none;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.06)}
+    .flex{display:flex;gap:10px;align-items:center}
+    input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.03);font-size:13px}
+    .muted{color:var(--muted);font-size:13px}
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center}
+    .modal{background:var(--card);width:420px;padding:18px;border-radius:12px}
+    .close{background:transparent;border:none;color:var(--muted);cursor:pointer}
+    /* toast */
+    .toast{position:fixed;right:18px;bottom:18px;background:#0b1220;padding:12px;border-radius:10px;color:#fff;border:1px solid rgba(255,255,255,0.04)}
+    @media(max-width:800px){.sidebar{display:none}.content{padding:14px}}
+  </style>
 </head>
-<body>
-<h2>Barang Masuk</h2>
-<input type="text" id="bm_nama" placeholder="Nama barang">
-<input type="number" id="bm_qty" placeholder="Jumlah">
-<input type="text" id="bm_ket" placeholder="Keterangan optional">
-<button onclick="submitBarangMasuk()">Simpan Barang Masuk</button>
+<body data-theme="dark">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><img src="https://i.imgur.com/4QKd4ky.png" alt="logo"><span>NUZ Dashboard</span></div>
+      <div class="muted" style="margin-top:8px;font-size:13px">Inventory & Stock Manager</div>
 
-<div id="bm_result"></div>
+      <nav>
+        <a href="#" class="active" data-nav="home">🏠 Dashboard</a>
+        <a href="#" data-nav="masuk">📥 Barang Masuk</a>
+        <a href="#" data-nav="keluar">📤 Barang Keluar</a>
+        <a href="#" data-nav="stok">📦 Stok</a>
+        <a href="#" data-nav="history">📜 History</a>
+      </nav>
 
-<script src="config.js"></script>
-<h2>Barang Keluar</h2>
-<input type="text" id="bk_nama" placeholder="Nama barang">
-<input type="number" id="bk_qty" placeholder="Jumlah">
-<input type="text" id="bk_ket" placeholder="Keterangan">
-<button onclick="submitBarangKeluar()">Simpan Barang Keluar</button>
+      <div style="margin-top:18px">
+        <button id="themeToggle" class="btn ghost">Toggle Theme</button>
+      </div>
+    </aside>
 
-<div id="bk_result"></div>
-<h2>Stok Barang</h2>
-<button onclick="loadStok()">Reload Stok</button>
-<div id="stok_list"></div>
+    <main class="content">
+      <div class="topbar">
+        <div>
+          <h1 style="margin:0">Dashboard</h1>
+          <div class="muted">Selamat datang — sistem siap</div>
+        </div>
+        <div class="flex">
+          <div class="muted" id="serverStatus">Server: --</div>
+        </div>
+      </div>
 
+      <div class="cards">
+        <div class="card">
+          <h3>Barang Masuk</h3>
+          <div class="muted">Tambah barang manual</div>
+          <div style="margin-top:10px" class="flex">
+            <button class="btn" id="openMasuk">Tambah</button>
+            <button class="btn ghost" id="reloadStokBtn">Reload Stok</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Barang Keluar</h3>
+          <div class="muted">Catat pengeluaran barang</div>
+          <div style="margin-top:10px" class="flex">
+            <button class="btn" id="openKeluar">Tambah</button>
+            <button class="btn ghost" id="openHistory">Lihat History</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Stok</h3>
+          <div class="muted">Lihat jumlah stok sekarang</div>
+          <div style="margin-top:10px" class="flex">
+            <button class="btn" id="goStok">Open Stok</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Laporan</h3>
+          <div class="muted">Export atau cetak laporan</div>
+          <div style="margin-top:10px" class="flex">
+            <button class="btn ghost" id="dummyReport">Generate</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mainArea">
+        <!-- Home content -->
+        <div id="home" class="page">
+          <div class="card">
+            <h3>Quick Stok Preview</h3>
+            <div id="stokPreview" class="muted">Tekan "Reload Stok" untuk melihat</div>
+          </div>
+        </div>
+
+        <!-- Masuk page -->
+        <div id="masuk" class="page" style="display:none">
+          <div class="card">
+            <h3>Form Barang Masuk</h3>
+            <div style="margin-top:8px">
+              <label>Nama Barang</label>
+              <input id="bm_nama" placeholder="Nama barang">
+              <div style="height:8px"></div>
+              <div class="grid2">
+                <div>
+                  <label>Jumlah</label>
+                  <input id="bm_qty" type="number" placeholder="Jumlah">
+                </div>
+                <div>
+                  <label>Keterangan</label>
+                  <input id="bm_ket" placeholder="Optional">
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <button class="btn" id="submitMasuk">Simpan Barang Masuk</button>
+              <div id="bm_result"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keluar page -->
+        <div id="keluar" class="page" style="display:none">
+          <div class="card">
+            <h3>Form Barang Keluar</h3>
+            <div style="margin-top:8px">
+              <label>Nama Barang</label>
+              <input id="bk_nama" placeholder="Nama barang">
+              <div style="height:8px"></div>
+              <div class="grid2">
+                <div>
+                  <label>Jumlah</label>
+                  <input id="bk_qty" type="number" placeholder="Jumlah">
+                </div>
+                <div>
+                  <label>Keterangan</label>
+                  <input id="bk_ket" placeholder="Optional">
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <button class="btn" id="submitKeluar">Simpan Barang Keluar</button>
+              <div id="bk_result"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stok page -->
+        <div id="stok" class="page" style="display:none">
+          <div class="card">
+            <h3>Daftar Stok</h3>
+            <div style="margin-top:8px">
+              <div id="stok_list">Tekan "Reload Stok" untuk memuat data.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History page -->
+        <div id="history" class="page" style="display:none">
+          <div class="card">
+            <h3>History Barang</h3>
+            <div style="margin-top:8px">
+              <button class="btn" id="loadHistoryMasuk">History Masuk</button>
+              <button class="btn ghost" id="loadHistoryKeluar">History Keluar</button>
+              <div style="height:10px"></div>
+              <div id="history_table">Tekan tombol untuk memuat history.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- modal templates (hidden) -->
+  <template id="modalTemplate">
+    <div class="modal-backdrop">
+      <div class="modal">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong id="modalTitle">Modal</strong>
+          <button class="close" onclick="closeModal()">✕</button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  </template>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" style="pointer-events:none"></div>
+
+  <script>
+    // -----------------------------
+    // GANTI INI dengan URL Web App API kamu (yang return JSON)
+    const API_URL = "REPLACE_WITH_YOUR_API_URL";
+    // -----------------------------
+
+    // small util
+    function toast(msg, time = 2500) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(()=> t.remove(), time);
+    }
+
+    // navigation
+    document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click', e=>{
+      e.preventDefault();
+      document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
+      a.classList.add('active');
+      const nav = a.getAttribute('data-nav');
+      document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+      document.getElementById(nav).style.display='block';
+    }));
+
+    // theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', ()=>{
+      const root = document.body;
+      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+
+    // initial server status check
+    function pingServer(){
+      fetch(API_URL)
+        .then(r=>r.json())
+        .then(d=>{
+          document.getElementById('serverStatus').textContent = 'Server: OK';
+          const pv = document.getElementById('stokPreview');
+          pv.textContent = `Message: ${d.message} — ${d.time}`;
+        })
+        .catch(err=>{
+          document.getElementById('serverStatus').textContent = 'Server: Error';
+          console.error('ping err', err);
+        });
+    }
+    pingServer();
+
+    // ----- Barang Masuk -----
+    document.getElementById('openMasuk').addEventListener('click', ()=>{
+      document.querySelector('nav a[data-nav="masuk"]').click();
+    });
+
+    document.getElementById('submitMasuk').addEventListener('click', ()=>{
+      const nama = document.getElementById('bm_nama').value.trim();
+      const qty = Number(document.getElementById('bm_qty').value);
+      const ket = document.getElementById('bm_ket').value.trim();
+      if(!nama||!qty){ toast('Nama & qty wajib'); return; }
+      fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'barangMasuk', nama, qty, keterangan:ket}) })
+        .then(r=>r.json())
+        .then(res=>{
+          document.getElementById('bm_result').innerHTML = '<b>'+res.message+'</b>';
+          toast(res.message);
+          document.getElementById('bm_nama').value=''; document.getElementById('bm_qty').value=''; document.getElementById('bm_ket').value='';
+        })
+        .catch(e=>{ console.error(e); toast('Gagal mengirim'); });
+    });
+
+    // ----- Barang Keluar -----
+    document.getElementById('openKeluar').addEventListener('click', ()=>{
+      document.querySelector('nav a[data-nav="keluar"]').click();
+    });
+
+    document.getElementById('submitKeluar').addEventListener('click', ()=>{
+      const nama = document.getElementById('bk_nama').value.trim();
+      const qty = Number(document.getElementById('bk_qty').value);
+      const ket = document.getElementById('bk_ket').value.trim();
+      if(!nama||!qty){ toast('Nama & qty wajib'); return; }
+      fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'barangKeluar', nama, qty, keterangan:ket}) })
+        .then(r=>r.json())
+        .then(res=>{
+          document.getElementById('bk_result').innerHTML = '<b>'+res.message+'</b>';
+          toast(res.message);
+          document.getElementById('bk_nama').value=''; document.getElementById('bk_qty').value=''; document.getElementById('bk_ket').value='';
+        })
+        .catch(e=>{ console.error(e); toast('Gagal mengirim'); });
+    });
+
+    // ----- Stok -----
+    document.getElementById('reloadStokBtn').addEventListener('click', loadStok);
+    document.getElementById('goStok').addEventListener('click', ()=>{ document.querySelector('nav a[data-nav="stok"]').click(); loadStok(); });
+
+    function loadStok(){
+      const el = document.getElementById('stok_list');
+      el.innerHTML = 'Loading...';
+      fetch(API_URL + '?action=stok')
+        .then(r=>r.json())
+        .then(data=>{
+          // expect data to be array or object depending on your API
+          if(Array.isArray(data)){
+            // assume rows of [nama, qty, ...]
+            const rows = data.map(r=>`<tr><td>${escapeHtml(r[0]||'')}</td><td>${escapeHtml(r[1]||'')}</td></tr>`).join('');
+            el.innerHTML = `<table><thead><tr><th>Nama</th><th>Qty</th></tr></thead><tbody>${rows}</tbody></table>`;
+          } else if(data.status==='success' && data.items){
+            const rows = data.items.map(i=>`<tr><td>${escapeHtml(i.nama)}</td><td>${escapeHtml(i.qty)}</td></tr>`).join('');
+            el.innerHTML = `<table><thead><tr><th>Nama</th><th>Qty</th></tr></thead><tbody>${rows}</tbody></table>`;
+          } else {
+            el.innerHTML = '<div class="muted">Endpoint stok belum terformat. Lihat console.</div>';
+            console.log('Stok raw', data);
+          }
+        })
+        .catch(err=>{ el.innerHTML = '<div class="muted">Gagal muat stok.</div>'; console.error(err); });
+    }
+
+    // ----- History -----
+    document.getElementById('openHistory').addEventListener('click', ()=>{ document.querySelector('nav a[data-nav="history"]').click(); });
+    document.getElementById('loadHistoryMasuk').addEventListener('click', ()=> loadHistory('historyMasuk'));
+    document.getElementById('loadHistoryKeluar').addEventListener('click', ()=> loadHistory('historyKeluar'));
+
+    function loadHistory(action){
+      const el = document.getElementById('history_table');
+      el.innerHTML = 'Loading...';
+      fetch(API_URL + '?action=' + action)
+        .then(r=>r.json())
+        .then(data=>{
+          if(Array.isArray(data)){
+            const rows = data.map(r=>`<tr><td>${escapeHtml(r[0]||'')}</td><td>${escapeHtml(r[1]||'')}</td><td>${escapeHtml(r[2]||'')}</td><td>${escapeHtml(r[3]||'')}</td></tr>`).join('');
+            el.innerHTML = `<table><thead><tr><th>Waktu</th><th>Nama</th><th>Qty</th><th>Keterangan</th></tr></thead><tbody>${rows}</tbody></table>`;
+          } else {
+            el.innerHTML = '<div class="muted">History format unexpected. See console.</div>';
+            console.log('History raw', data);
+          }
+        })
+        .catch(err=>{ el.innerHTML = '<div class="muted">Gagal muat history.</div>'; console.error(err); });
+    }
+
+    // util escape
+    function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // small helper: close modal
+    function closeModal(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; }
+
+    // initial show home
+    document.querySelector('nav a[data-nav="home"]').click();
+
+  </script>
 </body>
 </html>
-
-
-
