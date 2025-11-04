@@ -1,13 +1,10 @@
-// URL Web App Apps Script kamu
-const API_URL = "https://script.google.com/macros/s/AKfycbyb0pRVhA67_qF7YSByO_s-PdxmAc2gxClueYsBi8JE98ql06Qs61h8jwwFMmOgKxU/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzJ9GUlX7mTTarbuLJBoVAXkruIJwrMjkaxSxgrMgd5rsrrmEONi3B67FsAPwNMsjFx/exec";
 
-// Fetch data dari Apps Script
 fetch(API_URL)
-  .then(response => response.json())
+  .then(res => res.json())
   .then(data => {
-    console.log("Data dari Apps Script:", data);
+    console.log("Data dari GAS:", data);
 
-    // Biar keliatan bukti muncul di halaman
     const box = document.createElement("div");
     box.style.padding = "10px";
     box.style.marginTop = "20px";
@@ -15,13 +12,14 @@ fetch(API_URL)
     box.style.borderRadius = "8px";
     box.innerHTML = `
       <h3>Data dari Apps Script:</h3>
-      <p><b>Message:</b> ${data.message || JSON.stringify(data)}</p>
-      <p><b>Timestamp:</b> ${data.time || "-"}</p>
+      <p><b>Message:</b> ${data.message}</p>
+      <p><b>Waktu:</b> ${data.time}</p>
     `;
+
     document.body.appendChild(box);
   })
-  .catch(error => {
-    console.error("Error:", error);
+  .catch(err => {
+    console.error("Error:", err);
 
     const errBox = document.createElement("div");
     errBox.style.padding = "10px";
@@ -31,7 +29,7 @@ fetch(API_URL)
     errBox.style.color = "red";
     errBox.innerHTML = `
       <h3>Error</h3>
-      <p>Tidak bisa konek ke Apps Script. Cek console untuk detail.</p>
+      <p>Tidak bisa konek ke Apps Script. Cek console.</p>
     `;
     document.body.appendChild(errBox);
   });
