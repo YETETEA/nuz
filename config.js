@@ -33,3 +33,63 @@ fetch(API_URL)
     `;
     document.body.appendChild(errBox);
   });
+function submitBarangMasuk() {
+  const nama = document.getElementById("bm_nama").value;
+  const qty  = Number(document.getElementById("bm_qty").value);
+  const ket  = document.getElementById("bm_ket").value;
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "barangMasuk",
+      nama: nama,
+      qty: qty,
+      keterangan: ket
+    }),
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(r => r.json())
+  .then(res => {
+    document.getElementById("bm_result").innerHTML =
+      "<b>" + res.message + "</b>";
+
+    // bersihkan input
+    document.getElementById("bm_nama").value = "";
+    document.getElementById("bm_qty").value = "";
+    document.getElementById("bm_ket").value = "";
+  });
+}
+function submitBarangKeluar() {
+  const nama = document.getElementById("bk_nama").value;
+  const qty  = Number(document.getElementById("bk_qty").value);
+  const ket  = document.getElementById("bk_ket").value;
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "barangKeluar",
+      nama: nama,
+      qty: qty,
+      keterangan: ket
+    }),
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(r => r.json())
+  .then(res => {
+    document.getElementById("bk_result").innerHTML =
+      "<b>" + res.message + "</b>";
+
+    document.getElementById("bk_nama").value = "";
+    document.getElementById("bk_qty").value = "";
+    document.getElementById("bk_ket").value = "";
+  });
+}
+function loadStok() {
+  fetch(API_URL + "?action=stok")
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById("stok_list").innerHTML =
+        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+    });
+}
+
