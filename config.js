@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzJ9GUlX7mTTarbuLJBoVAXkruIJwrMjkaxSxgrMgd5rsrrmEONi3B67FsAPwNMsjFx/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzyE_ushUhZfueK-KIM-4nMDadwyZtmm_EMOlzP3NJ6mpMZQRLpwfokn7D9eNlSuS8q/exec";
 
 fetch(API_URL)
   .then(res => res.json())
@@ -92,4 +92,5 @@ function loadStok() {
         "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
     });
 }
+
 
